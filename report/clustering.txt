@@ -1,0 +1,243 @@
+\section{Clustering}
+In this section we provide the results of the clustering analysis, which was performed using the following algorithms:
+
+\begin{itemize}
+    \item KMeans, from the family of instance-base clustering algorithms
+    \item DBScan, from the family of density-based clustering algorithms
+    \item HDBScan, from the family of density-based clustering algorithms
+    \item Agglomerative (or hierarchical) Clustering. This last method was applied both with and without the connectivity constraint, and in all of the different versions: Single Link, Average Link, Complete Link and Ward.
+    \item Kmodes, to cluster on categorical features.
+\end{itemize}
+
+\subsection{Preprocessing towards clustering}
+The dataset used was the one resulting from the data understanding phase, but with further pre processing specific to the task of clustering. 
+A first distinction is made based on the features the different algorithms work with: KMeans, DBScan and HDBScan, and the Agglomerative Clustering algorithms all need to be used on numerical features, meanwhile KModes is specifically designed to work with categorical ones. The preprocessing of the dataset reflected this distinction.
+
+As a preliminary step in preprocessing the dataset for KMeans and other algorithms requiring numerical features, columns of type 'object' and 'boolean' were removed: these columns were originalTitle, titleType, canHaveEpisodes, countryOfOrigin and genres. It was also decided to drop the decade column which, although numerical, is considered categorical and therefore not useful in an analysis based on distances. 
+Other columns dropped were userReviewsTotal and criticReviewsTotal, since their information was previously condensed into totalReviews. 
+The dataset was therefore now composed of the following features: 
+
+\begin{itemize}
+    \item Rating
+    \item startYear
+    \item Runtime Minutes
+    \item Award Wins
+    \item Total Images
+    \item Total Videos
+    \item Total Credits
+    \item Award Nomination Exclude Wins
+    \item Number of Regions
+    \item Total Reviews 
+    \item Number of Ratings
+\end{itemize}
+
+The main focus of this analysis was to understand how different types of preprocessing affected the performances of the different algorithms, and which ones were the most appropriate for our data. Therefore, the features transformation was performed in four different ways:
+\begin{itemize}
+	\item The first transformation was performed using only the MinMax scaling method
+	\item The second one used both the MinMax Scaling and the logarithmic transformation
+	\item The third transformation only entailed Standard Scaling
+	\item The fourth one used Standard Scaling and the logarithmic transformation	
+\end{itemize}
+
+As for KModes, the dataset was preprocessed by deleting all the numerical features and keeping the following:
+
+\begin{itemize}
+	\item titleType
+	\item canHaveEpisodes
+	\item countryofOrigin
+	\item genres
+	\item decade
+\end{itemize}
+
+\subsection{Centroid-based Clustering: KMeans}
+To understand the most appropriate amount of clusters to use on our dataset, the \textbf{Elbow Method} was applied, finding that different types of preprocessing required different ks, as it can be seen in table \ref{table: KM_K}:
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|}
+    \hline
+    Preprocessing & K \\
+    \hline
+    MinMax & 4 \\
+    MinMax+Log & 4 \\
+    Standard Scaling & 5 \\
+    Standard+Log & 3 \\
+    \hline
+    \end{tabular}
+    \caption{KMeans Results - Elbow Method}
+    \label{table: KM_K}
+\end{table}
+
+The clustering results were suboptimal and differed between most methods. In table \ref{table: KM}, the different SSEs and silhouette scores: 
+
+\begin{table}[h!]
+    \centering
+    \begin{tabular}{|c|c|c|}
+    \hline
+    \multicolumn{3}{|c|}{KMeans Clustering Results} \\
+    \hline
+     & SSE & Silhouette Score \\
+    \hline
+    MinMax & 629.92 & 0.30 \\
+    MinMax \& Log & 1723.69 & 0.17 \\
+    Standard Scaling & 74678.86 & 0.24 \\
+    Standard \& Log & 85385.59 & 0.24 \\
+    \hline
+    \end{tabular}
+    \caption{KMeans Clustering Results}
+    \label{table: KM}
+\end{table}
+
+The results are a clear sign that our dataset is not fit for clustering, as all the SSEs are high and the silhouette scores are very far from the ideal benchmark of 1.
+
+\subsection{Density-based Clustering}
+\subsubsection{DBScan}
+To find the epsilon for the DBScan algorithm, a list of values was initialized and looped over, to understand how many clusters it would generate and the respective silhouette score.The \textit{min\_samples} parameter was set to 3. In table \ref{table: DB} the results.
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|c|}
+    \hline
+    \multicolumn{3}{|c|}{DBScan Clustering Results} \\
+    \hline
+     Preprocessing & $\epsilon$ & Silhouette Score \\
+    \hline
+    MinMax & 0.3 & 0.57 \\
+    MinMax \& Log & 0.3 & 0.15 \\
+    Standard Scaling & 0.1 & -0.38 \\
+    Standard \& Log & 0.1 & 0.92 \\
+    \hline
+    \end{tabular}
+    \caption{DBScan Clustering Results}
+    \label{table: DB}
+\end{table}
+
+Just by looking at the silhouettes, DBScan seems to be the best method so far, but a furher visual analysis showed the clear limitations of this approach: in all the cases DBScan found one cluster containing nearly every instance, and a few others containing very small amounts of records. Furthermore, the identified clusters exhibit substantial overlap, to the point of being nearly indistinguishable, showing that DBScan does not apply properly to our data. 
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\linewidth]{3d_Dbscan.png}
+    \caption{An example of the DBScan application on the dataset with standard scaling and logarithmic transformation}
+    \label{fig:3d_Dbscan}
+\end{figure}
+
+\subsubsection{HDBScan}
+Since DBScan performed so poorly, HDBScan was also applied to understand whether a more complex density-based algorithm was a better choice. The results were not surprising, since it is now clear that our data does not show varying density and therefore is not of easy analysis by such algorithms. 
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|}
+    \hline
+    \multicolumn{2}{|c|}{HDBScan Clustering Results} \\
+    \hline
+     Preprocessing & Silhouette Score \\
+    \hline
+    MinMax & -0.16 \\
+    MinMax \& Log & -0.05 \\
+    Standard Scaling & -0.17 \\
+    Standard \& Log & 0.05 \\
+    \hline
+    \end{tabular}
+    \caption{HDBScan Clustering Results}
+    \label{table: HDB}
+\end{table}
+
+\subsection{Agglomerative Clustering}
+The hierarchical clustering was performed for all different configurations: \textit{complete link}, \textit{single link}, \textit{group average} and \textit{Ward}. The analysis started without applying the connectivity constraint, but after further inspection it was added as it provided better results. A search over a range of 2 to 10 numbers of clusters was also performed, to understand how the silhouettes scores changed based on the hyperparameter. It was found that after a total of three clusters there was a significant drop in the quality, from around 0.60 to around o.10 for all the algorithms. 
+In table \ref{table: Agg_Clustering}, the best results for each type of preprocessing:
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|c|}
+    \hline
+    \multicolumn{3}{|c|}{Hierarchical Clustering Results} \\
+    \hline
+    Preprocessing & Algorithm & Silhouette Score \\
+    \hline
+    MinMax & Average Link & 0.70 \\
+    MinMax \& Log & Average Link & 0.50 \\
+    Standard Scaling & Complete Linkage & 0.92 \\
+    Standard \& Log & Average Linkage & 0.71 \\
+    \hline
+    \end{tabular}
+    \caption{HDBScan Clustering Results}
+    \label{table: Agg_Clustering}
+\end{table}
+
+Although the results of the silhouette scores seem promising, at a further inspection the clusters found by all the different hierarchical clustering algorithms do not reflect interesting meaning in the data. As it is highlighted in the images below, all of the algorithms have found one single huge cluster, and a few others with little to no instances in them. 
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{avglink_minmax.png}
+        \caption{Average Linkage Clustering Results on the MinMax Scaled Dataset}
+        \label{fig:img1}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{avglink_minmaxlog.png}
+        \caption{Average Linkage Clustering Results on the MinMax Scaled and Logarithmically transformed Dataset}
+        \label{fig:img2}
+    \end{subfigure}
+    \caption{Confronto tra le due immagini}
+    \label{fig:confronto_MinMax}
+\end{figure}
+
+\begin{figure}[h!]
+    \centering
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{complink_std.png}
+        \caption{Complete Linkage Clustering Results on the Standard Scaled Dataset}
+        \label{fig:img3}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}[b]{0.45\textwidth}
+        \centering
+        \includegraphics[width=\textwidth]{avglink_STDLOG.png}
+        \caption{Average Linkage Clustering Results on the Standard Scaled and Logarithmically Transformed Dataset}
+        \label{fig:img4}
+    \end{subfigure}
+    \caption{Confronto tra le due immagini}
+    \label{fig:confronto_STD}
+\end{figure}
+
+\subsection{Discussion of the results}
+The best partition found was certainly the one provided by KMeans, although its silhouette score was not the highest, but as was discussed in previous sections an high silhoutte score never resulted in a meaningful clustering for the data available. We will proceed now with a deeper analysis of the clustering resulting from KMeans on the MinMax scaled dataset.
+Firstly, we tried to understand the usage of the different features by KMeans, which is visualized in image \ref{fig: km_f}. 
+
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.5\linewidth]{kmeans_features.png}
+    \caption{Usage of different features by KMeans}
+    \label{fig: km_f}
+\end{figure}
+
+As it can be seen, KMeans tends to prefer certain features: it is important to notice that the less used features are the ones that bare the least amount of information. More specifically, \textit{awardWins}, \textit{totalImages}, \textit{totalVideos} and \textit{totalCredits} are very inconsistent, the most present value being 0 with just a few peaks in the distribution.
+However, the semantics extracted from the features do not appear to be reflected in the resulting clusters, which can be seen in image \ref{fig: 3d_km}. The visualization uses three key features: \textit{runtimeMinutes}, \textit{awardWins} and \textit{startYear}.
+
+\begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.5\linewidth]{3d_kmeans.png}
+        \caption{3d Scatter Plot of the KMeans clusters}
+        \label{fig: 3d_km}
+\end{figure}
+
+
+The clusters are all very close and there is no clear separation between them. Nonetheless, an attempt can be made to infer their potential semantic distinctions:
+\begin{itemize}
+    \item The orange cluster contains products of heterogenous length and little to no \textit{awardWins}, but it very clearly identifies older productions. It can be hypothesized that this group refers to forgotten medias which did not pass the test of time, since a cross-analysis with the number of ratings also showed the same cluster in the same position, therefore making it clear that these products are not of particular interest nowadays.
+    \item The green cluster identifies yet again an heterogenous group: for the most part older products, with a strong prevalence of shorter media but also a few longer ones, and an higher count of \textit{awardWins}. This group may refer to older products yet again, but this time the ones who were the most critically acclaimed.
+    \item The blue cluster is mainly composed of newer products of shorter length and a varying amount of \textit{awardWins}, we could therefore interpret it as containing mostly newer television and shorter production of varying success.
+    \item The pink cluster is composed of products with longer duration, which probably identifies films, varying number of ratings and mostly newer products. The medias in this cluster are the newer movies and longer productions, containing both the ones that recieved a few awards and more critically acclaimed one.
+\end{itemize}
+
+Below, the distribution of each titleType in the clusters allows to better understand their heterogenous composition: 
+\begin{figure}[h!]
+        \centering
+        \includegraphics[width=0.5\linewidth]{distribution_kn.png}
+        \caption{Distribution of the title types in the different clusters}
+        \label{fig:distrib_knn}
+\end{figure}
