@@ -1,0 +1,108 @@
+\section{Regression}
+For this task two datasets were used, as for classification: the training and the test datasets resulting from the preprocessing phase. Additional preprocessing was applied to both datasets. \\
+Since regression is the task of predicting a continue numerical feature, all non-numerical and categorical columns were dropped, resulting in the following ones:
+
+\begin{itemize}
+    \item num\_ratings
+    \item startYear
+    \item runtimeMinutes
+    \item awardWins
+    \item totalImages
+    \item totalVideos
+    \item totalCredits
+    \item awardNominationsExcludeWins
+    \item numRegions
+    \item totalReviews
+\end{itemize}
+
+The analysis focused on multivariate regression, at first with just one target variable for which we used a \textit{Linear Regressor} and a \textit{Decision Tree Regressor}, and then multivariate regression with two target variables, using again a \textit{Decision Tree Regressor}.
+The variables normalized with MinMax scaling and the logarithmic transformation were used just for the \textit{Linear Regressor}, meanwhile for the \textit{Decision Trees} we kept them as they were to preserve the interpretability of the model. This was done with the second part of the analysis in mind, which is to understand whether the most important features selected by the multivariate-single target \textit{Decision Tree} were useful to better the performance of the \textit{Linear Regressor}. \\
+A dummy regressor was also trained as a tool of comparison, with the \textit{strategy} parameter set to \textit{mean}. The R2 value obtained was of -0.00027 which can be approximated as 0.
+
+\subsection{Results of the Multivariate Regression with One Target Variable}
+The target variable chosen to be predicted in the multivariate-single target scenario was the one deemed most interesting to be used, the \textit{rating} variable: this is because predicting the rating of a media could potentially mean being able to predict its success.
+
+The Linear Regressor which used all the variables available had the worst performance overall, not even surpassing the dummy classifier. This was probabily because of a lack of linear relationships in the data and possibly a number of features which was too high and not informative. In table \ref{table: lr_results}, the results:
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|c|}
+    \hline
+    \multicolumn{3}{|c|}{Linear Regressor Results} \\
+    \hline
+    MSE & MAE & R2 \\
+    \hline
+    0.44 & 0.65 & -19.7 \\
+    \hline
+    \end{tabular}
+    \caption{Linear Regressor Results}
+    \label{table: lr_results}
+\end{table}
+
+In image \ref{fig: linear_scatterplot}, the relationship between the actual rating, the predicted rating and the number of awardWins is shown: it can be seen how the linear regressor always predicts the same value for all instances.
+
+\begin{figure}[h!]
+    \centering
+    \includegraphics[width=0.5\linewidth]{linear_scatterplot.png}
+    \caption{Scatterplot showing behaviour of Linear Regressor}
+    \label{fig: linear_scatterplot}
+\end{figure}
+
+As for the Decision Tree used for the multivariate-single target regression, the performance was better than the one of both the \textit{Dummy Classifier} and the \textit{Linear Regressor}. The model was trained using a Grid Search using 10 folds and otpimizing the following parameters: \textit{criterion}, \textit{min\_samples\_split},\textit{min\_sample\_leaf}, \textit{max\_depth} and \textit{ccp\_alpha}. The best values were found to be, respectively: squared\_error, 3, 5, 6 and 0.00.
+
+The results obtained were:
+\begin{itemize}
+    \item R2: 0.191
+    \item MSE: 1.558
+    \item MAE: 0.950
+\end{itemize}
+
+In figure \ref{fig: tree_plot}, the first tree levels of the Decision Tree plotted: 
+
+\begin{figure}[h]
+    \centering
+    \includegraphics[width=0.5\linewidth]{tree_plot.png}
+    \caption{Plot of the Decision Tree - Multivariate \& Single Variable}
+    \label{fig: tree_plot}
+\end{figure}
+
+\subsection{Feature Importances for the Linear Regressor}
+To perform this second part of the analysis, the first action made was to print out the feature importances of the \textit{Decision Tree Regressor} (DTR). Many trials were conducted to understand how many of the features found by the DTR were most meaningful for the \textit{Linear Regressor}, finding the following were most helpful: \textit{runtimeMinutes}, \textit{startYear}, \textit{num\_ratings}, \textit{totalCredits}, \textit{numRegions}. \\
+
+Overall, the Linear Regressor performance is still not good, but it did get significantly better, as shown in table \ref{table: lr_fi}:
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|c|}
+    \hline
+    \multicolumn{3}{|c|}{Linear Regressor with Feature Importance} \\
+    \hline
+    MSE & MAE & R\^2 \\
+    \hline
+    0.0106 & 0.073 & 0.0526 \\
+    \hline
+    \end{tabular}
+    \caption{Linear Regressor with Feature Importance}
+    \label{table: lr_fi}
+\end{table}
+
+\subsection{Results of the Multivariate Regression with Two Target Variables}
+This analysis was performed using again a Decision Tree Regressor, which was optimized using a grid search over the same parameter's grid that was used before. This time, the best parameters found were: as for criterion it was absolute error, the ccp\_alpha was 0.01, the max\_depth was best at None, and the min\_samples\_leaf and min\_samples\_split were respectively at 5 and 3. \\
+As dependent variables rating and num\_ratings were chosen, to continue on the path of predicting the possibile popularity of a product. In table \ref{table: dt_2t} the results:
+
+\begin{table}[h]
+    \centering
+    \begin{tabular}{|c|c|c|}
+    \hline
+    \multicolumn{3}{|c|}{Decision Tree-Multivariate Regression with 2 Targets} \\
+    \hline
+    MSE & MAE & $R^2$ \\
+    \hline
+    156525714.8 & 461.503 & 0.228 \\
+    \hline
+    \end{tabular}
+    \caption{Decision Tree-Multivariate Regression with 2 Targets}
+    \label{table: dt_2t}
+\end{table}
+
+Although the $R^2$ is at the highest, the MSE and the MAE are also at their highest, signaling that the model is able to understand some variance in the data but is not capable of predicting the instances properly.
