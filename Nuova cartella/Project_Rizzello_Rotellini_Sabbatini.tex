@@ -82,7 +82,7 @@
 In this study, we conducted a data mining analysis on an IMDb dataset. We began with a data understanding phase, exploring and preparing the dataset’s attributes to gain deeper insights. Subsequently, we applied various clustering algorithms, including K-Means, DBSCAN, and Hierarchical Clustering. Following clustering, we progressed to classification, training multiple models such as K-Nearest Neighbors (KNN), Naïve Bayes, and Decision Trees. Our exploration also extended to regression analysis, and finally, we employed association rule mining techniques, specifically Apriori and FP-Growth algorithms, to identify meaningful patterns within the data.
 \section{Data Understanding}
 This dataset from IMDb contains information about movies and TV shows, including key attributes such as titles, release years, runtimes, user ratings, awards, and genres.
-\subsection{Data Semantics}
+\\A "soft" data preparation strategy was adopted, as the objective was to create a consistent and coherent baseline to be used across various required tasks (clustering, classification, pattern mining, regression), each of which might necessitate further specific transformations. In this preliminary phase, we handled missing values, identified and corrected outliers, removed irrelevant or redundant features, and conducted general data cleaning operations. All modifications were documented and saved in a new \texttt{.csv} file, serving as the shared starting point for subsequent analyses.\subsection{Data Semantics}
 Our datase was composed of 16430 records with 23 descriptive features. The features were both categorical (\textit{qualitative}) and numeric (\textit{quantitative}). Table \ref{tab:feature_description} summarizes the key features of the dataset.
 \setlength{\tabcolsep}{6pt} % spazio orizzontale tra colonne
 \renewcommand{\arraystretch}{1.3} % altezza riga aumentata per leggibilità
@@ -156,11 +156,210 @@ userReviewsTotal & Numeric, Discrete & Total number of user-written reviews. \\
 \end{longtable}
 \end{center}
  Table \ref{tab:feature_description} summarizes the key features of the dataset.
-\subsection{Data Quality and Correlations}
 \subsection{Distribution and Statistics}
+\begin{figure}[H]
+    \begin{minipage}{0.60\textwidth}
+        \textbf{\texttt{rating}}\par
+        The \texttt{rating} variable represents an average evaluation score for the titles.
+        Originally expressed as intervals (e.g., (7, 8]), it was transformed into a numerical value (e.g., 7.5).\par
+
+        \begin{itemize}
+            \item \texttt{7.5} is the most populated class (4,822 titles), followed by \texttt{6.5}.
+            \item Extreme classes \texttt{0.5} and \texttt{1.5} contain only 67 titles, confirming the low frequency of very low ratings.
+            \item The right tail (8–10) is less frequent but still significant.
+        \end{itemize}
+    \end{minipage}
+    \hfill
+\begin{minipage}{0.39\textwidth}
+    \centering
+    \includegraphics[width=0.9\linewidth]{rating_dist_prep.png}
+    \vspace{3pt}
+    \captionof{figure}{Distribution of Average Rating Classes}
+    \label{fig:rating-dist}
+\end{minipage}
+\end{figure}
+
+\begin{minipage}{0.45\textwidth}
+\textbf{\texttt{titleType}}\par
+This categorical feature indicates the type of the title. The bar chart in Figure \ref{fig:titleType} shows a clear dominance of types such as \texttt{movie}, followed by \texttt{tvSeries} and \texttt{short}. Numerous aggregated metrics were analyzed for each category in order to highlight structural differences and support further feature selection or segmentation.
+
+One of the most relevant graphs, Figure \ref{fig:type_runtime}, shows the average duration of works for each \texttt{titleType}. A high degree of variability between categories is evident:
+\begin{itemize}
+    \item \texttt{tvMiniSeries} have the highest average duration, followed by \texttt{movie} and \texttt{tvSpecial}.
+    \item Formats such as \texttt{short} and \texttt{tvShort} naturally have shorter durations (around 10--15 minutes).
+    \item Error bars indicate notable variance, especially within \texttt{tvMiniSeries}, highlighting strong internal heterogeneity.
+\end{itemize}
+\end{minipage}
+\hfill
+\begin{minipage}{0.5\textwidth}
+\centering
+\includegraphics[width=0.9\linewidth]{titleTyple.png}
+\captionof{figure}{Distribution of Title Types}
+\label{fig:titleType}
+\vspace{0.5cm}
+\includegraphics[width=0.9\linewidth]{titleType_runtime.png}
+\captionof{figure}{Average Duration by Title Type}
+\label{fig:type_runtime}
+\end{minipage}
+
+\textbf{Other significant findings}:
+\begin{itemize}
+    \item The runtime distribution shows that movies and videos have longer average durations and a long right tail. \texttt{tvSpecial} and \texttt{short} are mainly concentrated between 0 and 30 minutes.
+    \item \texttt{userReviewsTotal}: \texttt{movie} and \texttt{tvSeries} receive far more user comments compared to other types.
+    \item \texttt{numRegions}: \texttt{movie} titles are distributed across more regions on average, suggesting greater dissemination and international coverage.
+    \item \texttt{criticReviewsTotal}: \texttt{movie} titles also receive significantly more attention from critics.
+    \item \texttt{awardNominationsExcludeWins} and \texttt{awardWins}: \texttt{tvSeries} and \texttt{movie} are the categories with the highest number of recognitions, indicating higher perceived quality or relevance.
+\end{itemize}
+The \texttt{videoGame} category was removed because it is not consistent with the cinematic or television nature of the other categories. Its inclusion could have introduced semantic noise into the models.\\
+
+\begin{figure}[H]
+    \begin{minipage}{0.45\textwidth}
+        \textbf{\texttt{countryOfOrigin}}\par
+        A statistical summary of this feature revealed the diversity of countries represented in the dataset. Nevertheless, a limited number of nations (e.g., USA, UK, Canada) account for the majority of cases. 
+
+
+        As shown in Figure \ref{fig:country}, the distribution is highly skewed:
+        \begin{itemize}
+            \item The United States (US) dominates with over 6,500 titles, followed by the United Kingdom (GB) and Japan (JP).
+            \item Other countries have significantly lower representation.
+        \end{itemize}
+        
+        \vspace{2mm}
+                To reduce the cardinality and asymmetry of the \texttt{countryOfOrigin} feature, a new variable \texttt{continent} was introduced via ISO mapping using the \texttt{pycountry} library.
+                As shown in Figure \ref{fig:continent}, the transformation into continents helps aggregate sparse countries into broader and more interpretable categories.
+    \end{minipage}
+    \hfill
+    \begin{minipage}{0.5\textwidth}
+        \centering
+        \includegraphics[width=0.9\linewidth]{country.png}
+        {\footnotesize \captionof{figure}{Distribution of Titles by Country of Origin}\label{fig:country}}
+        \vspace{0.5cm}
+        \includegraphics[width=0.9\linewidth]{continent.png}
+        {\footnotesize \captionof{figure}{Distribution of Titles by Continent(after exploding multi-continent entries)}\label{fig:continent}}
+    \end{minipage}
+\end{figure}
+
+
+
+\subsection{Data Quality and Correlations}
+\subsubsection{Handling Missing Values and Duplicates}
+From the initial exploration phases, a significant presence of missing values in various variables emerged. Although \texttt{NaN} values were initially explicitly present only in the \texttt{awardWins} column (2,618 values), the string \texttt{\textbackslash N} was found to recur in multiple fields. After converting this string to \texttt{NaN}, the following missing value percentages were identified:
+
+\begin{itemize}
+    \item \texttt{endYear}: \textbf{95.05\%}
+    \item \texttt{runtimeMinutes}: \textbf{29.53\%}
+    \item \texttt{awardWins}: \textbf{15.93\%}
+    \item \texttt{genres}: \textbf{2.32\%}
+\end{itemize}
+
+The absence of duplicates was also verified, both absolutely and with respect to the \texttt{originalTitle} column, which proved to be unique.
+
+The following strategies were adopted for handling missing values:
+
+\begin{itemize}
+    \item \textbf{\texttt{endYear}}: removed due to the excessive percentage of missing data (~95\%), compromising its utility.
+    \item \textbf{\texttt{genres}}: rows with missing values were deleted. Reliable imputation techniques capable of credibly assigning a genre were not deemed feasible.
+    \item \textbf{\texttt{awardWins}}: missing values were replaced with \textbf{0}, assuming that the absence of data corresponds to no recorded awards. This choice was supported by the observed distribution, in which 0 predominates.
+\end{itemize}
+
+
 \subsection{Outliers}
+During the data cleaning phase, a systematic analysis of outliers was conducted for several continuous numerical features.
+
+Initially, records with implausible durations were removed:
+\[
+\texttt{runtimeMinutes} \leq 0 \quad \text{or} \quad \texttt{runtimeMinutes} > 300
+\]
+Even for short works, a duration of at least one minute is reasonable, while titles exceeding 5 hours are exceptionally rare and potentially anomalous.
+
+A custom Python class was then implemented to detect and remove outliers, with two available methods:
+
+\begin{itemize}
+    \item \textbf{Interquartile Range (IQR)}: uses quartiles to identify extreme values.
+    \item \textbf{Percentiles}: removes data below the $0.1^{\text{th}}$ percentile and above the $99.9^{\text{th}}$ percentile.
+\end{itemize}
+
+In our case, the method based on \textit{extreme percentiles} was chosen, proving particularly effective for highly skewed and unbalanced distributions, as observed in the analyzed variables. Using IQR would have resulted in the removal of approximately one-third of the dataset.
+
+\paragraph{Variables Considered}
+The columns analyzed for outlier detection were: \texttt{numVotes, userReviewsTotal, num\_ratings, awardNominationsExcludeWins, awardWins, criticReviewsTotal, runtimeMinutes}.
+
+For each variable, the acceptable interval was calculated as:
+\[
+[x_{\text{min}}, x_{\text{max}}] = [P_{0.1}, P_{99.9}]
+\]
+Where $P_{0.1}$ and $P_{99.9}$ represent the 0.1st and 99.9th percentiles, respectively. Values outside this range were considered outliers and removed. Figure \ref{fig:outliers-before-after} shows \textit{before vs. after} graphs, with thresholds indicated by dashed lines.
+
+A total of 71 outliers were removed, equivalent to approximately \textbf{0.43\%} of the original dataset. The impact was visually confirmed through the plots below.
+
+\begin{itemize}
+    \item Extreme values in \texttt{userReviewsTotal}, \texttt{num\_ratings}, and \texttt{criticReviewsTotal} caused strong distribution skewness.
+    \item For \texttt{runtimeMinutes}, a \textbf{group-based} removal logic was applied, using \texttt{titleType} as an aggregation criterion. This accounted for the significant heterogeneity among different formats (e.g., \textit{short}, \textit{movie}, \textit{tvMiniSeries}).
+\end{itemize}
+
+\begin{figure}[H]
+    \centering
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.85\linewidth]{userReviewsTotal_before_after.png}
+        \caption{\texttt{userReviewsTotal}}
+    \end{subfigure}
+    \hfill
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.85\linewidth]{awardWins_before_after.png}
+        \caption{\texttt{awardWins}}
+    \end{subfigure}
+
+    \vspace{0.5cm}
+
+    \begin{subfigure}{0.45\textwidth}
+        \centering
+        \includegraphics[width=0.85\linewidth]{runtimeMinutes_before_after.png}
+        \caption{\texttt{runtimeMinutes} by \texttt{titleType}}
+    \end{subfigure}
+
+    \caption{Distribution of numerical variables before and after outlier removal (extreme percentiles)}
+    \label{fig:outliers-before-after}
+\end{figure}
+
+The presence of outliers, particularly high-end values, not only distorts variable scales, but may also compromise the performance of distance-sensitive models. Therefore, selective outlier removal was a crucial step in ensuring a cleaner and more reliable data foundation for downstream analysis. However, in order not to excessively alter the original data distribution, we deliberately chose to retain a limited number of moderate outliers. This allowed us to preserve the dataset's heterogeneity while achieving a reasonable trade-off between robustness and representativeness.
+
 \subsection{Particular Values}
 \subsection{Data Transformation}
+
+\subsection{Pairwise Correlations and Elimination of Variables}
+
+To identify redundancy and strengthen the quality of the feature set, a correlation analysis was carried out on the numerical variables retained after preprocessing. The resulting Pearson correlation matrix is shown in Figure~\ref{fig:correlation-matrix}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.85\linewidth]{correlation_matrix.png}
+\caption{Correlation matrix of numerical features}
+\label{fig:correlation-matrix}
+\end{figure}
+
+The matrix highlights some strong and expected associations: notably, \texttt{awardWins} correlates positively with \texttt{awardNominationsExcludeWins}, and both \texttt{userReviewsTotal} and \texttt{totalReviews} are closely linked to \texttt{criticReviewsTotal} and \texttt{num\_ratings}. These relationships suggest that user engagement, critic presence, and review volume are jointly informative dimensions of title popularity. 
+
+Moderate correlations are also present between production-oriented variables such as \texttt{totalCredits}, \texttt{totalImages}, and \texttt{numRegions}, although no excessive collinearity was observed.
+
+A noteworthy preprocessing step was the consolidation of the highly correlated variables \texttt{numVotes} and \texttt{ratingCount} (previously showing $r > 0.98$), which were replaced by a single aggregated feature named \texttt{num\_ratings}. This transformation retained their informational content while eliminating redundancy. 
+
+Additionally, two columns—\texttt{worstRating} and \texttt{bestRating}—were removed from the dataset due to their negligible variance. Both had almost constant values and therefore lacked any meaningful contribution to model discrimination.
+
+\paragraph{Pairwise Relationships with \texttt{userReviewsTotal}}
+
+To further examine the features most associated with audience participation, we plotted the pairwise relationships between \texttt{userReviewsTotal} and its most correlated variables. The resulting graph is shown in Figure~\ref{fig:pairplot-userreviews}.
+
+\begin{figure}[H]
+\centering
+\includegraphics[width=0.95\linewidth]{pairplot_user.png}
+\caption{Selected pairwise correlations with \texttt{userReviewsTotal}}
+\label{fig:pairplot-userreviews}
+\end{figure}
+
+From the plot, \texttt{userReviewsTotal} shows a clear upward trend in relation to \texttt{num\_ratings} and \texttt{criticReviewsTotal}, confirming their role as key indicators of content visibility and interest. Some clustering is visible at low values of \texttt{awardNominationsExcludeWins}, with sparse but distinct increases in user reviews among titles with higher nomination counts. The dispersion of values in \texttt{numRegions} also reflects the broader distribution reach of certain titles, especially those with global or multi-market releases.
+
 
 \section{Clustering}
 In this section we provide the results of the clustering analysis, which was performed using the following algorithms:
@@ -590,50 +789,54 @@ As dependent variables  \texttt{rating} and  \texttt{num\_ratings} were chosen, 
 Although the $R^2$ is at the highest, the MSE and the MAE are also at their highest, signaling that the model is able to understand some variance in the data but is not capable of predicting the instances properly.
 
 \section{Pattern Mining}
+
+\section{Pattern Mining}
 \subsection{Data Preparation}
 
 The \textbf{data preparation} phase for pattern mining was carried out with the aim of selecting and processing only the most semantically relevant features, in order to extract interpretable patterns.
-Following an initial exploratory inspection, variables considered uninformative or redundant for the analysis—such as \texttt{originalTitle}, \texttt{totalImages}, \texttt{totalVideos}, \texttt{totalCredits}, and \texttt{canHaveEpisodes}—were removed. Additionally, the \texttt{short} label from the \texttt{titleType} feature was discarded, as this information was already represented in the \texttt{genres} attribute.
+Following an initial exploratory inspection, variables considered uninformative or redundant for the analysis—such as \texttt{originalTitle}, \texttt{totalImages}, \texttt{totalVideos}, \texttt{totalCredits}, and \texttt{canHaveEpisodes}—were removed. Additionally, the label  \texttt{short} from the \texttt{titleType} feature was discarded, as this information was already represented in the \texttt{genres} attribute.
 
 \paragraph{Categorical feature processing.}
-To reduce the cardinality and asymmetry of the \texttt{countryOfOrigin} feature, a new variable \texttt{continent} was introduced via ISO mapping using the \texttt{pycountry} library. Countries that could not be mapped to a known continent (tagged as \texttt{Unknown}) were excluded to ensure semantic consistency.  
+Continent tagged as \texttt{Unknown} were excluded to ensure semantic consistency.  
 The \texttt{continent} and \texttt{genres} features, being multi-label in nature, were transformed into binary format using the \texttt{MultiLabelBinarizer} class, generating a set of binary columns with coherent prefixes (e.g., \texttt{genre\_Comedy}, \texttt{continent\_Europe}).  
 The \texttt{titleType} feature was instead encoded using \texttt{get\_dummies}, producing a standard one-hot representation.
 
+\begin{minipage}{0.58\textwidth}
 \paragraph{Transformation of numerical variables.}
 A mixed approach was adopted for the numerical features, based on discretization techniques guided by empirical distributions and clustering.
+
 The \texttt{num\_ratings} variable, which was highly skewed, was transformed using a logarithmic function (\texttt{log1p}) and subsequently standardized via \texttt{MinMaxScaler}. It was then discretized using \texttt{KMeans} clustering (\texttt{k=5}). The resulting clusters were ordered based on the median and renamed according to rating volume (\texttt{Very Low} -- \texttt{Very High}).
+\end{minipage}
+\hfill
+\begin{minipage}{0.4\textwidth}
+\centering
+\includegraphics[width=\linewidth]{Kmeans_num_rating.png}
+\captionof{figure}{Scatterplot K-Means \texttt{num\_ratings}}
+\label{fig:enter-label}
+\end{minipage}
 
-\begin{figure}[H]
-    \centering
-    \includegraphics[width=0.4\linewidth]{Kmeans_num_rating.png}
-    \caption{Scatterplot K-Means num\_ratings}
-    \label{fig:enter-label}
-\end{figure}
 
 
+\begin{minipage}{0.35\textwidth}
+\centering
+\begin{tabular}{lc}
+\toprule
+\textbf{Class} & \textbf{Count} \\
+\midrule
+Flop & 5022 \\
+Considered by Critics & 2466 \\
+Critically Acclaimed & 1580 \\
+\bottomrule
+\end{tabular}
+\captionof{table}{Distribution of the \texttt{success\_class} variable.}
+\label{tab:success_class}
+\end{minipage}
+\hfill
+\begin{minipage}{0.6\textwidth}
 \paragraph{Definition of the \texttt{success\_class} variable.}
+As the dataset lacked a direct indicator of critical success, the target variable \texttt{success\_class} was defined through a rule-based approach combining award data and critic reviews. Titles that received at least one award or one nomination were labeled as \texttt{Critically Acclaimed}. Those without awards or nominations but with at least one critic review were categorized as \texttt{Considered by Critics}. The remaining titles, which had neither reviews nor recognition, were classified as \texttt{Flop}.
+\end{minipage}
 
-Since the dataset did not contain a direct measure of critical recognition, the target variable \texttt{success\_class} was constructed using a rule-based logic that incorporates both critical reviews and award-related information. In particular:
-\begin{itemize}
-  \item A title is labeled as \texttt{Critically Acclaimed} if it has received at least one award or one nomination;
-  \item If it has not received awards or nominations but has at least one critical review, it is labeled as \texttt{Considered by Critics};
-  \item Titles with no critical reviews and no recognition are classified as \texttt{Flop}.
-\end{itemize}
-
-\begin{table}[H]
-    \centering
-    \begin{tabular}{cc}
-        Flop & 5022\\
-        \hline
-        Considered by Critics & 2466 \\
-        \hline
-        Critically Acclaimed & 1580\\
-    \end{tabular}
-    \caption{Distribution of the \texttt{success\_class} target variable in the development set based on critical reviews, awards, and nominations.}
-
-    \label{tab:my_label}
-\end{table}
 
 \paragraph{Logical discretization of additional features.}
 To improve the interpretability of the patterns, additional numerical variables were discretized using manually defined thresholds based on empirical criteria:
@@ -661,13 +864,13 @@ The visualizations obtained reveal that the most frequent patterns are dominated
 
 \begin{figure}[H]
 \centering
-\begin{minipage}{0.48\textwidth}
+\begin{minipage}{0.38\textwidth}
   \includegraphics[width=\linewidth]{zmin2.png}
   \caption{Closed and maximal itemsets for \texttt{zmin=2}.}
   \label{fig:itemset_zmin2}
 \end{minipage}
 \hfill
-\begin{minipage}{0.48\textwidth}
+\begin{minipage}{0.38\textwidth}
   \includegraphics[width=\linewidth]{zmin3.png}
   \caption{Closed and maximal itemsets for \texttt{zmin=3}.}
   \label{fig:itemset_zmin3}
@@ -712,11 +915,36 @@ The rules were evaluated using three main metrics:
   \item \textbf{Lift}: the ratio between the observed confidence and the expected confidence under statistical independence.
 \end{itemize}
 
-The rules listed in Table~\ref{tab:regole_lift_alto} represent some of the most relevant patterns identified during the analysis, selected based on particularly high \textit{lift} values (greater than 2.5), indicating a strong and non-random association between antecedent and consequent.
+
+The rules listed in Table~\ref{tab:regole_lift_alto} represent some of the most relevant patterns identified during the analysis. These rules were selected based on particularly high \textit{lift} values (greater than 2.5), indicating a strong and non-random association between antecedent and consequent.
+
+\begin{table}[H]
+\centering
+\caption{Examples of high-lift association rules with predictive potential}
+\label{tab:regole_lift_alto}
+\begin{tabular}{|p{4.2cm}|p{5.5cm}|c|c|c|}
+\hline
+\textbf{Consequent} & \textbf{Antecedent} & \textbf{Conf.} & \textbf{Lift} & \textbf{\% Support} \\
+\hline
+rating\_cluster\_label=Very High N. Ratings & region\_distribution=International, type\_movie & 0.388 & 6.56 & 3.14 \\
+\hline
+genre\_Mystery & genre\_Crime, genre\_Drama & 0.252 & 5.10 & 2.40 \\
+\hline
+success\_class=Critically Acclaimed & region\_distribution=International, type\_movie & 0.499 & 2.86 & 4.04 \\
+\hline
+genre\_Crime & type\_tvEpisode, genre\_Drama, region\_distribution=Local & 0.411 & 3.02 & 5.26 \\
+\hline
+\end{tabular}
+\end{table}
+
 For instance, the first rule shows that movies distributed internationally and labeled as \texttt{type\_movie} have a substantially higher likelihood of receiving a very high number of user ratings. This implies a strong relationship between distribution reach and popularity in terms of visibility and audience approval.
-Another pattern highlights that internationally distributed \texttt{type\_movie} titles are often also labeled as \texttt{Critically Acclaimed}, meaning they receive positive recognition from critics. Such rules are especially relevant for predictive tasks involving the qualitative success of titles.
-Various confidence thresholds were tested: with \texttt{conf = 30}, a total of 1072 rules were generated; with \texttt{conf = 40}, the number dropped to 580; and with \texttt{conf = 70}, only 101 rules remained. A threshold of \texttt{conf = 40} was ultimately selected, as it offered a good balance between quantity, semantic diversity, and rule quality. This threshold yields a manageable set of rules while maintaining sufficiently high confidence levels and often achieving lift values above 1.5, indicative of meaningful, non-trivial associations.
-In fact, support, confidence, and lift were jointly analyzed to assess rule quality. Rules with high support ensure statistical robustness, while high confidence reflects strong predictive capability. However, it is the \textit{lift} that reveals the true associative strength: values significantly above 1 indicate non-random co-occurrence. For example, the rule \texttt{success\_class=Critically Acclaimed} $\Leftarrow$ \texttt{region\_distribution=International, type\_movie} presents a lift of 2.86 and a confidence of 0.50, suggesting a strong informative link between international distribution and critical recognition.
+
+Another rule highlights that internationally distributed \texttt{type\_movie} titles are also frequently labeled as \texttt{Critically Acclaimed}, meaning they receive positive recognition from critics. Such rules are especially relevant for predictive tasks involving the qualitative success of movie titles.\\
+
+Different confidence thresholds were tested to evaluate the trade-off between rule quantity and quality. At \texttt{conf = 30}, 1072 rules were extracted; this dropped to 580 at \texttt{conf = 40}, and just 101 at \texttt{conf = 70}. The threshold of \texttt{conf = 40} was chosen as the best compromise, offering a diverse yet manageable set of rules with sufficient confidence and frequent lift values above 1.5—indicative of non-trivial associations.
+
+Rule quality was assessed jointly through support, confidence, and lift: high support indicates statistical reliability, confidence reflects predictive strength, and lift captures the true associative relevance. Notably, the rule \texttt{success\_class=Critically Acclaimed} $\Leftarrow$ \texttt{region\_distribution=International, type\_movie} achieved a lift of 2.86 and confidence of 0.50, pointing to a strong link between international distribution and critical success.
+
 
 \begin{table}[H]
 \centering
@@ -727,23 +955,22 @@ In fact, support, confidence, and lift were jointly analyzed to assess rule qual
 \hline
 success\_class=Flop & continent\_North America, region\_distribution=Local & 0.689 & 1.24 & 21.55 \\
 \hline
-region\_distribution=Local & continent\_North America, success\_class=Flop & 0.787 & 1.47 & 21.55 \\
-\hline
+
 success\_class=Flop & rating\_category=Average, region\_distribution=Local & 0.749 & 1.35 & 13.52 \\
 \hline
-success\_class=Flop & genre\_Drama, region\_distribution=Local & 0.655 & 1.18 & 12.26 \\
-\hline
+
 region\_distribution=Local & genre\_Drama, continent\_North America, success\_class=Flop & 0.743 & 1.39 & 6.15 \\
 \hline
 success\_class=Flop & rating\_category=Average, continent\_North America, region\_distribution=Local & 0.721 & 1.30 & 6.89 \\
 \hline
-\caption{Examples of association rules with confidence $\geq$ 0.65 and relevant support}
+
 \end{tabular}
+    \caption{Examples of association rules with confidence $\geq$ 0.65 and relevant support}
 \end{table}
 
 \subsubsection{Discussion on Association Rules}
 
-A relatively low confidence threshold (\texttt{$\geqslant$0.2}) was adopted to account for the strong class imbalance, as outlined in the \emph{data preparation} section. This trade-off allowed for the inclusion of rules that are predictively useful even for minority classes.
+Due to the dataset’s class imbalance (see \emph{data preparation}), a relatively low confidence threshold (\texttt{$\geqslant$0.2}) was adopted to retain rules potentially useful for minority classes.
 
 \begin{figure}[H]
 \centering
@@ -752,14 +979,13 @@ A relatively low confidence threshold (\texttt{$\geqslant$0.2}) was adopted to a
 \label{fig:metriche_regole}
 \end{figure}
 
-Figure~\ref{fig:metriche_regole} illustrates the distributions of key metrics for the association rules extracted using the FP-Growth algorithm.
+As shown in Figure~\ref{fig:metriche_regole}, most rules exhibit low support (2–6\%), consistent with the dataset's sparsity. Confidence values are typically between 0.2 and 0.5, with few rules exceeding 0.7, indicating limited conditional reliability. Lift values cluster around 1.0, but a significant subset exceeds 1.5—some even beyond 3.0—suggesting the presence of strong and potentially informative co-occurrences.
 
-\textbf{On the left}, the support distribution confirms that most rules exhibit support between 2\% and 6\%, with a steep drop beyond this range. This behavior reflects the sparse nature of the dataset, where only a few item combinations occur frequently. Rules with support above 10\% are particularly rare.
+These results highlight a trade-off: many rules are statistically valid yet moderately reliable. The combination of modest confidence and high lift points to nuanced or partial associations. For downstream use (e.g., in predictive models), rule filtering based on lift and coverage becomes essential to reduce noise.
 
-\textbf{In the center}, the confidence distribution shows a sharply decreasing trend. The majority of rules fall within the 0.2 to 0.5 confidence range, while only a minority exceed 0.7. This implies that, while many rules are statistically valid, few demonstrate strong conditional reliability.
+The subsequent analysis concentrated on rules with consequents involving the target variables \texttt{success\_class} and \texttt{rating\_category}, in order to investigate how patterns of critical and audience reception interrelate.
 
-\textbf{On the right}, the lift distribution is concentrated around 1.0, which signals statistical independence between antecedent and consequent. However, it is noteworthy that a non-negligible number of rules achieve lift values above 1.5 and even beyond 3.0, representing highly significant co-occurrences and potentially very useful rules for descriptive or predictive purposes.
-Overall, these distributions confirm that the FP-Growth algorithm was capable of identifying a diverse set of rules, many of which are statistically meaningful, albeit not always highly reliable. The high number of rules with moderate confidence but lift values above 1 suggests the presence of interesting patterns, though sometimes only partially strong or ambiguous. In supervised applications, this necessitates careful rule selection (e.g., based on lift and coverage) to prevent excessive noise in predictive models.
+Overall, these distributions confirm that the FP-Growth algorithm was capable of identifying a diverse set of rules, many of which are statistically meaningful, albeit not always highly reliable. The high number of rules with moderate confidence but lift values above 1 suggests the presence of interesting patterns, though sometimes only partially strong or ambiguous. 
 Subsequently, our analysis focused on extracting association rules where the target classes \texttt{success\_class} and \texttt{rating\_category} serve as consequents, in order to explore the relationship between critical reception and audience evaluation.
 
 \begin{itemize}
@@ -790,15 +1016,12 @@ Regarding audience perception, predictive rules for \texttt{rating\_category} we
 In general, these rules show that certain content segments—such as North American local TV series—tend to be well-received by the public but may simultaneously be overlooked by critics (e.g., rules associated with \texttt{Flop}).
 This dichotomy between public perception and critical evaluation is further reinforced by rules related to the class \texttt{Considered by Critics}, which display lift values above 1.6 in association with internationally distributed films of moderate popularity (\texttt{rating\_cluster=Medium} or \texttt{High N. Ratings}), albeit with lower confidence compared to rules for the \texttt{Flop} class.
 
-
-\subsubsection{Application on the Test Set}
-
 The strongest rules were subsequently applied to the test set by checking whether the rule \textit{antecedents} were fully contained within the transactions. The outcome was positive: \textbf{98\% of the transactions} in the test set triggered at least one rule, with an \textbf{average of 14.5 applicable rules per transaction}.
 We analyzed the \textit{top-5} most frequently triggered rules. Some of these, although statistically strong, proved semantically trivial (e.g., \texttt{runtime\_category=Short} $\leftrightarrow$ \texttt{type\_tvEpisode}). Therefore, the focus was shifted to rules with informative \textit{consequents}, such as \texttt{success\_class} and \texttt{rating\_category}.
 
 \begin{table}[htbp]
 \centering
-\caption{Association rules with \texttt{success\_class} as antecedent or consequent}
+\caption{Some Association rules with \texttt{success\_class} as antecedent or consequent}
 \label{tab:flop_rules}
 \begin{tabular}{|p{5cm}|p{4.5cm}|c|c|c|}
 \hline
@@ -809,10 +1032,7 @@ success\_class=Flop & type\_tvEpisode & 0.461 & 1.310  \\
 success\_class=Flop & region\_distribution=Local & 0.691 & 1.289 \\
 \hline
 region\_distribution=Local & success\_class=Flop & 0.714 & 1.289  \\
-\hline
-region\_distribution=Local & type\_tvEpisode & 0.598 & 1.700  \\
-\hline
-continent\_North America & type\_tvEpisode & 0.444 & 1.261 \\
+
 \hline
 \end{tabular}
 \end{table}
@@ -827,11 +1047,9 @@ continent\_North America & type\_tvEpisode & 0.444 & 1.261 \\
 \hline
 type\_tvEpisode, continent\_North America, region\_distribution=Local & rating\_category=Good & 0.508 & 1.634 \\
 \hline
-type\_tvEpisode, continent\_North America & rating\_category=Good & 0.506 & 1.629 \\
-\hline
-type\_tvEpisode, region\_distribution=Local & rating\_category=Good & 0.492 & 1.583 \\
-\hline
-type\_tvEpisode & rating\_category=Good & 0.485 & 1.561 \\
+
+type\_tvEpisode,\newline region\_distribution=Local & rating\_category=Good & 0.492 & 1.583 \\
+
 \hline
 type\_tvEpisode, \newline region\_distribution=Local, \newline success\_class=Flop & rating\_category=Good & 0.479 & 1.543 \\
 \hline
@@ -846,9 +1064,12 @@ The extracted rules were employed to construct a rule-based classifier, where th
 
 \textbf{For the variable \texttt{success\_class}}, the classifier achieved an accuracy of 67.8\%, with particularly strong performance on the \texttt{Flop} class (precision 0.74, recall 0.93, F1-score 0.82). This result reflects the abundance of high-confidence and high-support rules associated with this category. In contrast, the \texttt{Critically Acclaimed} and \texttt{Considered by Critics} classes were predicted with low accuracy, especially in terms of recall (0.18 and 0.35 respectively), indicating reduced predictive coverage for these categories.
 
-\textbf{For the variable \texttt{rating\_category}}, the overall accuracy was approximately 49\%. The only classes effectively predicted were \texttt{Average} (F1-score 0.61) and \texttt{Good} (F1-score 0.51), while \texttt{Excellent} and \texttt{Poor} were never predicted by the model (recall 0.00), due to the absence of sufficiently strong rules associated with these classes. This significantly limits the model's generalizability and confirms the impact of class imbalance in the dataset.
-In addition to accuracy, precision, recall, and F1-score were evaluated, highlighting how the rule-based approach tends to favor majority classes while neglecting less represented ones. The predictive power of the classifier is thus highly asymmetric, a direct consequence of the greater availability of frequent and reliable rules for dominant classes.
-In summary, while the rule-based system performs well for the most common classes, its effectiveness drops considerably when it comes to covering minority classes. This reveals a structural limitation of the approach, which relies on the empirical frequency of itemsets and therefore struggles to generate reliable predictions in the presence of highly imbalanced class distributions.
+\textbf{For the variable \texttt{rating\_category}}, the overall accuracy reached approximately 49\%. Only the \texttt{Average} (F1-score 0.61) and \texttt{Good} (F1-score 0.51) classes were predicted effectively, while \texttt{Excellent} and \texttt{Poor} were never predicted (recall 0.00), reflecting the absence of strong rules for minority classes. This outcome underscores the impact of class imbalance and limits the model's generalizability.
+
+Beyond accuracy, evaluation metrics such as precision, recall, and F1-score confirmed that the rule-based classifier systematically favors majority classes. Its predictive capacity is notably asymmetric, driven by the greater availability of frequent and confident rules for dominant categories.
+
+In summary, while the model performs adequately on prevalent classes, its performance deteriorates sharply for underrepresented ones—highlighting a key limitation of rule-based systems when applied to imbalanced datasets.
+
 
 \subsection{Conclusions}
 
@@ -857,13 +1078,6 @@ The FP-Growth algorithm proved preferable due to its ability to generate a signi
 The derived rules highlighted meaningful relationships between movie features, geographical distribution, genres, and success metrics (both critical and audience-based). In particular, a clear distinction emerged between patterns associated with critical acclaim and those related to audience ratings, underlining the utility of this approach for comparative and predictive analysis.
 The rule-based classification system produced mixed results. For the variable \texttt{success\_class}, the model achieved a notable accuracy of 67.8\%, showing strong performance for the majority class \texttt{Flop}. However, predictive performance was limited for minority classes. A similar trend was observed for \texttt{rating\_category}, with an overall accuracy of 49\% and poor coverage of the \texttt{Excellent} and \texttt{Poor} categories.
 In summary, the rule-based approach demonstrated good descriptive and interpretative potential but exhibited clear limitations in imbalanced supervised learning contexts. The reliance on empirical itemset frequency poses a structural constraint, making it difficult to produce reliable predictions for underrepresented classes.
-Future enhancements may include:
-\begin{itemize}
-\item the adoption of class balancing techniques (e.g., oversampling or synthetic rule generation);
-\item integration with hybrid models combining rules and machine learning classifiers;
-\item automatic rule selection based on multi-objective criteria such as coverage, confidence, and lift.
-\end{itemize}
 
-Overall, the pattern mining process, when appropriately tuned, remains a powerful and flexible tool for data exploration, classification, and semantic enrichment.
 
 \end{document}
